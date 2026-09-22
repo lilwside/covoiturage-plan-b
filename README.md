@@ -27,12 +27,13 @@ Le fichier `.env` fournit `EXPO_PUBLIC_SUPABASE_URL` et `EXPO_PUBLIC_SUPABASE_AN
 ```
 app/                      routes expo-router
   _layout.tsx             stack de navigation
-  index.tsx               US1 — liste des trajets
-  trips/[id].tsx          US1 — détail d'un trajet
+  index.tsx               US1 — écran Rechercher (départ, arrivée, date)
+  results.tsx             US1 — résultats de recherche
+  trips/[id].tsx          détail d'un trajet (lecture seule, base de l'US2)
 src/
   lib/supabase.ts         client Supabase
-  design-system/          tokens.ts + components/ (Text, Card, Badge, Avatar, Button, Chip, …)
-  features/trips/         types, api (lecture Supabase), hooks, formatage, filtres, composants
+  design-system/          tokens.ts + components/ (Text, Card, Badge, Avatar, Button, TextField, DateField, …)
+  features/trips/         types, api (recherche Supabase), hooks, formatage, paramètres de recherche, composants
 ```
 
 ## User stories
@@ -40,14 +41,17 @@ src/
 | US  | Titre                  | État        |
 | --- | ---------------------- | ----------- |
 | US1 | Consulter les trajets  | ✅ livrée   |
-| US2 | —                      | à venir     |
+| US2 | Réserver une place     | à venir     |
+| US3 | Retrouver mes réservations | à venir |
+| US4 | Publier un trajet      | à venir     |
+| US5 | Plan B                 | à venir     |
 
 ### US1 — Consulter les trajets
 
-- Liste des trajets `scheduled` à venir, groupés par jour, triés par heure de départ.
-- Recherche libre départ/arrivée (insensible aux accents, « Paris Lyon » fonctionne), filtre « Places disponibles ».
-- Pull-to-refresh, états chargement / vide / erreur avec « Réessayer ».
-- Détail : itinéraire, horaires, durée et arrivée estimée, prix, places, mode de réservation, conducteur (note, expérience), véhicule, infos du conducteur.
+- Écran Rechercher : champs Départ, Arrivée (texte) et Date (sélecteur natif, optionnel), bouton pill « Rechercher », inversion départ/arrivée.
+- Résultats lus dans la table `trips` avec filtres côté Supabase (`ilike` sur les villes, bornes du jour choisi), groupés par jour et triés par heure.
+- Chaque carte : heure de départ, villes, prix, avatar + prénom du conducteur (et note), places restantes.
+- Message clair si aucun trajet ne correspond, avec retour à la recherche. Pull-to-refresh, états chargement / erreur avec « Réessayer ».
 
 ## Base de données (Supabase)
 

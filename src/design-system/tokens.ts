@@ -5,9 +5,9 @@
 
 export const colors = {
   // Marque
-  primary: '#2F5BEA',
-  primarySoft: '#E8EEFF',
-  primaryDark: '#1E3FB5',
+  primary: '#0071EB',
+  primarySoft: '#E5F1FD',
+  primaryDark: '#0058B8',
   accent: '#F59E0B',
   accentSoft: '#FEF3C7',
 
@@ -28,8 +28,8 @@ export const colors = {
   successSoft: '#DCFCE7',
   warning: '#B45309',
   warningSoft: '#FEF3C7',
-  danger: '#B91C1C',
-  dangerSoft: '#FEE2E2',
+  danger: '#C11417',
+  dangerSoft: '#FDE7E7',
   info: '#1D4ED8',
   infoSoft: '#DBEAFE',
 } as const;

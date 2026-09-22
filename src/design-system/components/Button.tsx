@@ -5,11 +5,21 @@ import { Text } from './Text';
 type ButtonProps = Omit<PressableProps, 'style'> & {
   label: string;
   variant?: 'primary' | 'secondary' | 'ghost';
+  /** `pill` (par défaut) : bouton entièrement arrondi. */
+  shape?: 'pill' | 'rounded';
   loading?: boolean;
   fullWidth?: boolean;
 };
 
-export function Button({ label, variant = 'primary', loading, disabled, fullWidth, ...rest }: ButtonProps) {
+export function Button({
+  label,
+  variant = 'primary',
+  shape = 'pill',
+  loading,
+  disabled,
+  fullWidth,
+  ...rest
+}: ButtonProps) {
   const isDisabled = disabled || loading;
   const labelColor = variant === 'primary' ? 'onPrimary' : 'primary';
   return (
@@ -21,6 +31,7 @@ export function Button({ label, variant = 'primary', loading, disabled, fullWidt
       style={({ pressed }) => [
         styles.base,
         styles[variant],
+        shape === 'pill' ? styles.pill : styles.rounded,
         fullWidth && styles.fullWidth,
         pressed && styles.pressed,
         isDisabled && styles.disabled,
@@ -39,14 +50,15 @@ export function Button({ label, variant = 'primary', loading, disabled, fullWidt
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 48,
+    minHeight: 52,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
-    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-start',
   },
+  pill: { borderRadius: radius.pill },
+  rounded: { borderRadius: radius.md },
   primary: { backgroundColor: colors.primary },
   secondary: { backgroundColor: colors.primarySoft },
   ghost: { backgroundColor: 'transparent' },

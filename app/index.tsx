@@ -1,139 +1,104 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
-import { EmptyState, Screen, Stack, Text, colors, spacing } from '@/design-system';
-import {
-  TripCard,
-  TripCardSkeleton,
-  TripFilters,
-  applyFilters,
-  dayKey,
-  defaultFilters,
-  formatLongDate,
-  useUpcomingTrips,
-  type Trip,
-  type TripFiltersState,
-} from '@/features/trips';
+import { useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Button, Card, DateField, Screen, Stack, Text, TextField, colors, radius, spacing } from '@/design-system';
+import { fromDayString, toDayString, toRouteParams, type TripSearchParams } from '@/features/trips';
 
-type ListItem = { type: 'header'; key: string; label: string } | { type: 'trip'; key: string; trip: Trip };
-
-function groupByDay(trips: Trip[]): ListItem[] {
-  const items: ListItem[] = [];
-  let currentDay: string | null = null;
-  for (const trip of trips) {
-    const day = dayKey(trip.departure_at);
-    if (day !== currentDay) {
-      currentDay = day;
-      items.push({ type: 'header', key: `day-${day}`, label: formatLongDate(trip.departure_at) });
-    }
-    items.push({ type: 'trip', key: trip.id, trip });
-  }
-  return items;
-}
-
-export default function TripsListScreen() {
+export default function SearchScreen() {
   const router = useRouter();
-  const { trips, loading, refreshing, error, reload, refresh } = useUpcomingTrips();
-  const [filters, setFilters] = useState<TripFiltersState>(defaultFilters);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [date, setDate] = useState<Date | null>(null);
+  const toRef = useRef<TextInput>(null);
 
-  const filtered = useMemo(() => applyFilters(trips, filters), [trips, filters]);
-  const items = useMemo(() => groupByDay(filtered), [filtered]);
-  const hasActiveFilters = filters.query.trim() !== '' || filters.onlyAvailable;
+  const today = fromDayString(toDayString(new Date()))!;
 
-  const header = (
-    <Stack gap="md" style={styles.header}>
-      <Stack gap="xs">
-        <Text variant="display">Où allez-vous ?</Text>
-        <Text color="secondary">Trajets à venir proposés par la communauté.</Text>
-      </Stack>
-      <TripFilters filters={filters} onChange={setFilters} />
-    </Stack>
-  );
+  const search = () => {
+    const params: TripSearchParams = { from, to, date: date ? toDayString(date) : null };
+    router.push({ pathname: '/results', params: toRouteParams(params) });
+  };
 
-  if (loading) {
-    return (
-      <Screen padded>
-        {header}
-        <Stack gap="md">
-          <TripCardSkeleton />
-          <TripCardSkeleton />
-          <TripCardSkeleton />
-        </Stack>
-      </Screen>
-    );
-  }
-
-  if (error) {
-    return (
-      <Screen padded>
-        {header}
-        <EmptyState
-          icon="cloud-offline-outline"
-          tone="danger"
-          title="Impossible de charger les trajets"
-          description={error}
-          actionLabel="Réessayer"
-          onAction={reload}
-        />
-      </Screen>
-    );
-  }
+  const swap = () => {
+    setFrom(to);
+    setTo(from);
+  };
 
   return (
     <Screen>
-      <FlatList
-        data={items}
-        keyExtractor={(item) => item.key}
-        contentContainerStyle={styles.list}
-        keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={header}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
-        ListEmptyComponent={
-          hasActiveFilters ? (
-            <EmptyState
-              icon="search-outline"
-              title="Aucun trajet ne correspond"
-              description="Essayez une autre ville ou retirez les filtres."
-              actionLabel="Effacer les filtres"
-              onAction={() => setFilters(defaultFilters)}
-            />
-          ) : (
-            <EmptyState
-              title="Aucun trajet pour le moment"
-              description="Revenez plus tard ou tirez vers le bas pour actualiser."
-            />
-          )
-        }
-        renderItem={({ item }) =>
-          item.type === 'header' ? (
-            <View style={styles.dayHeader}>
-              <Text variant="captionStrong" color="secondary" style={styles.dayLabel}>
-                {item.label}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.cardWrapper}>
-              <TripCard trip={item.trip} onPress={() => router.push({ pathname: '/trips/[id]', params: { id: item.trip.id } })} />
-            </View>
-          )
-        }
-        ListFooterComponent={
-          filtered.length > 0 ? (
-            <Text variant="caption" color="muted" align="center" style={styles.footer}>
-              {filtered.length === 1 ? '1 trajet' : `${filtered.length} trajets`}
-            </Text>
-          ) : null
-        }
-      />
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Stack gap="xs" style={styles.hero}>
+            <Text variant="display">Où allez-vous ?</Text>
+            <Text color="secondary">Trouvez un trajet proposé par la communauté.</Text>
+          </Stack>
+
+          <Card>
+            <Stack gap="md">
+              <View>
+                <TextField
+                  label="Départ"
+                  icon="radio-button-off"
+                  placeholder="Ville de départ"
+                  value={from}
+                  onChangeText={setFrom}
+                  onClear={() => setFrom('')}
+                  returnKeyType="next"
+                  onSubmitEditing={() => toRef.current?.focus()}
+                  blurOnSubmit={false}
+                />
+                <Pressable
+                  accessibilityLabel="Inverser départ et arrivée"
+                  hitSlop={8}
+                  onPress={swap}
+                  style={({ pressed }) => [styles.swap, pressed && styles.swapPressed]}
+                >
+                  <Ionicons name="swap-vertical" size={18} color={colors.primary} />
+                </Pressable>
+                <View style={styles.spacer} />
+                <TextField
+                  ref={toRef}
+                  label="Arrivée"
+                  icon="location"
+                  placeholder="Ville d'arrivée"
+                  value={to}
+                  onChangeText={setTo}
+                  onClear={() => setTo('')}
+                  returnKeyType="search"
+                  onSubmitEditing={search}
+                />
+              </View>
+              <DateField label="Date" value={date} onChange={setDate} minimumDate={today} />
+              <Button label="Rechercher" fullWidth onPress={search} />
+            </Stack>
+          </Card>
+
+          <Text variant="caption" color="muted" align="center" style={styles.hint}>
+            Laissez les champs vides pour voir tous les trajets à venir.
+          </Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { paddingTop: spacing.sm, paddingBottom: spacing.sm },
-  list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
-  dayHeader: { paddingTop: spacing.md, paddingBottom: spacing.sm },
-  dayLabel: { textTransform: 'capitalize' },
-  cardWrapper: { marginBottom: spacing.md },
-  footer: { paddingTop: spacing.lg },
+  flex: { flex: 1 },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
+  hero: { paddingTop: spacing.sm },
+  spacer: { height: spacing.md },
+  swap: {
+    position: 'absolute',
+    right: spacing.md,
+    top: 60,
+    zIndex: 1,
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  swapPressed: { opacity: 0.7 },
+  hint: { paddingHorizontal: spacing.lg },
 });

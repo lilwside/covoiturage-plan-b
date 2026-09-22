@@ -69,3 +69,9 @@ export function normalize(value: string): string {
     .toLowerCase()
     .trim();
 }
+
+/** Prénom à partir du nom complet (« Sarah Demo » → « Sarah »). */
+export function firstName(fullName: string | null | undefined): string {
+  const first = (fullName ?? '').trim().split(/\s+/)[0];
+  return first || 'Conducteur';
+}

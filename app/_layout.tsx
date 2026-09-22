@@ -17,7 +17,8 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'Trajets' }} />
+        <Stack.Screen name="index" options={{ title: 'Rechercher' }} />
+        <Stack.Screen name="results" options={{ title: 'Résultats' }} />
         <Stack.Screen name="trips/[id]" options={{ title: 'Détail du trajet' }} />
       </Stack>
     </SafeAreaProvider>

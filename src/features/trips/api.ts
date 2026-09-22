@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { dayBounds, type TripSearchParams } from './search';
 import type { DriverPublicProfile, Trip, TripRow } from './types';
 
 const TRIP_COLUMNS = `
@@ -38,18 +39,30 @@ async function attachDrivers(rows: TripRow[]): Promise<Trip[]> {
   return rows.map((row) => ({ ...row, driver: drivers.get(row.driver_id) ?? null }));
 }
 
+/** Échappe les jokers PostgREST pour un filtre `ilike`. */
+function likePattern(value: string): string {
+  return `%${value.trim().replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
+}
+
 /**
- * Liste des trajets planifiés à venir, triés par date de départ.
+ * Recherche des trajets planifiés (table `trips`) filtrés côté Supabase
+ * par ville de départ, ville d'arrivée et jour. Champs vides = pas de filtre.
  * La lecture anonyme est autorisée par la policy RLS `trips_select_anon`.
  */
-export async function fetchUpcomingTrips(): Promise<Trip[]> {
-  const { data, error } = await supabase
-    .from('trips')
-    .select(TRIP_COLUMNS)
-    .eq('status', 'scheduled')
-    .gte('departure_at', new Date().toISOString())
-    .order('departure_at', { ascending: true });
+export async function searchTrips(params: TripSearchParams): Promise<Trip[]> {
+  let query = supabase.from('trips').select(TRIP_COLUMNS).eq('status', 'scheduled');
 
+  if (params.from.trim()) query = query.ilike('origin_label', likePattern(params.from));
+  if (params.to.trim()) query = query.ilike('destination_label', likePattern(params.to));
+
+  const bounds = params.date ? dayBounds(params.date) : null;
+  if (bounds) {
+    query = query.gte('departure_at', bounds.start).lt('departure_at', bounds.end);
+  } else {
+    query = query.gte('departure_at', new Date().toISOString());
+  }
+
+  const { data, error } = await query.order('departure_at', { ascending: true });
   if (error) throw new TripsApiError(error.message);
   return attachDrivers((data ?? []) as unknown as TripRow[]);
 }

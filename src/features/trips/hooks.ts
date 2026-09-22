@@ -1,53 +1,52 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchTripById, fetchUpcomingTrips } from './api';
+import { fetchTripById, searchTrips } from './api';
+import type { TripSearchParams } from './search';
 import type { Trip } from './types';
-
-type AsyncState<T> = {
-  data: T;
-  loading: boolean;
-  refreshing: boolean;
-  error: string | null;
-};
 
 function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   return 'Une erreur inattendue est survenue.';
 }
 
-export function useUpcomingTrips() {
-  const [state, setState] = useState<AsyncState<Trip[]>>({
-    data: [],
-    loading: true,
-    refreshing: false,
-    error: null,
-  });
+export function useTripSearch(params: TripSearchParams) {
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
 
-  const load = useCallback(async (mode: 'initial' | 'refresh') => {
-    const id = ++requestId.current;
-    setState((s) => ({ ...s, loading: mode === 'initial', refreshing: mode === 'refresh', error: null }));
-    try {
-      const trips = await fetchUpcomingTrips();
-      if (id !== requestId.current) return;
-      setState({ data: trips, loading: false, refreshing: false, error: null });
-    } catch (err) {
-      if (id !== requestId.current) return;
-      setState((s) => ({ ...s, loading: false, refreshing: false, error: errorMessage(err) }));
-    }
-  }, []);
+  // Clé stable pour ne relancer la requête que si les paramètres changent réellement.
+  const key = `${params.from}|${params.to}|${params.date ?? ''}`;
+
+  const load = useCallback(
+    async (mode: 'initial' | 'refresh') => {
+      const id = ++requestId.current;
+      if (mode === 'initial') setLoading(true);
+      else setRefreshing(true);
+      setError(null);
+      try {
+        const result = await searchTrips(params);
+        if (id !== requestId.current) return;
+        setTrips(result);
+      } catch (err) {
+        if (id !== requestId.current) return;
+        setError(errorMessage(err));
+      } finally {
+        if (id === requestId.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [key],
+  );
 
   useEffect(() => {
     void load('initial');
   }, [load]);
 
-  return {
-    trips: state.data,
-    loading: state.loading,
-    refreshing: state.refreshing,
-    error: state.error,
-    reload: () => load('initial'),
-    refresh: () => load('refresh'),
-  };
+  return { trips, loading, refreshing, error, reload: () => load('initial'), refresh: () => load('refresh') };
 }
 
 export function useTrip(id: string | undefined) {
